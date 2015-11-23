@@ -7,6 +7,7 @@
 #include "utility.h"
 
 int fd[12][4];
+int fd_r2w[100];
 char comb[5000][20];
 int place[21];
 int host_num, player_num;
@@ -54,13 +55,13 @@ int main(int argc, char *argv[]) {
 
     pid_t pid;
 
-    int fd_r2w[12];
     for (int i=0; i<player_num; i++) score[i].id = i+1, score[i].value = 0;
 
+    int maxfd = 0;
     for (int i=0; i<host_num; i++) {
-        if (pipe(fd[i]) < 0)
+        if (pipe(&fd[i][0]) < 0)
             err_sys("pipe error");
-        if (pipe(fd[i]+2) < 0)
+        if (pipe(&fd[i][2]) < 0)
             err_sys("pipe error");
         fd_r2w[fd[i][0]] = fd[i][3];
         if ((pid=fork()) < 0)
@@ -72,12 +73,13 @@ int main(int argc, char *argv[]) {
             dup2(fd[i][2], STDIN_FILENO);
             char tmp[10];
             sprintf(tmp, "%d", i+1);
-            if (execl("host", "hey", tmp, (char*)0) < 0)
+            if (execl("host", "./host", tmp, (char*)0) < 0)
                 err_sys("execl error");
             exit(0);
         }
         close(fd[i][1]);
         close(fd[i][2]);
+        if (fd[i][0] >= maxfd) maxfd = fd[i][0]+1;
     }
     int solution[4];
     next_permutation(0, 0, player_num, solution);
@@ -85,26 +87,26 @@ int main(int argc, char *argv[]) {
     fd_set master_set, working_set;
     FD_ZERO(&master_set);
     int now = 0;
-    int maxfd = getdtablesize();
-    if (FD_SETSIZE < maxfd) maxfd = FD_SETSIZE;
     char buf[1000];
     int complete = 0;
     while (1) {
         if (now < host_num && now < cnt) {
             write(fd[now][3], comb[now], strlen(comb[now]));
+            fsync(fd[now][3]);
             FD_SET(fd[now][0], &master_set);
             now++;
         }
         else {
             memcpy(&working_set, &master_set, sizeof(master_set));
-            select(maxfd, &working_set, NULL, NULL, NULL);
             int ok;
+            select(maxfd, &working_set, NULL, NULL, NULL);
             for (ok=0; ok<maxfd; ok++) {
                 if(FD_ISSET(ok, &working_set)) {
                     add_score(ok);
                     complete++;
                     if (now < cnt) {
                         write(fd_r2w[ok], comb[now], strlen(comb[now]));
+                        fsync(fd_r2w[ok]);
                         now++;
                     }
                     else {
