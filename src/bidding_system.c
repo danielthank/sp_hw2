@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <errno.h>
-#include <string.h>
 #include "utility.h"
 
 int fd[12][4];
@@ -12,11 +6,6 @@ char comb[5000][20];
 int place[21];
 int host_num, player_num;
 int cnt;
-
-typedef struct{
-    int id;
-    int value;
-}Score;
 
 Score score[20];
 
@@ -39,14 +28,6 @@ void add_score(int fd) {
         fscanf(f, "%d%d", &id, &rank);
         score[id-1].value += (4-rank);
     }
-}
-
-int compare(const void *a, const void *b) {
-    const Score *aa = (Score*)a;
-    const Score *bb = (Score*)b;
-    int tmp = bb->value - aa->value;
-    if (!tmp) return aa->id - bb->id;
-    return tmp;
 }
 
 int main(int argc, char *argv[]) {
@@ -122,9 +103,10 @@ int main(int argc, char *argv[]) {
     strcpy(buf, "-1 -1 -1 -1\n");
     for (int i=0; i<host_num ;i++) {
         write(fd[i][3], buf, strlen(buf));
+        fsync(fd[i][3]);
     }
 
-    qsort((void*)score, player_num, sizeof(Score), compare);
+    qsort((void*)score, player_num, sizeof(Score), compare_score);
     place[score[0].id] = 1;
     for (int i=1; i<player_num; i++) {
         if (score[i].value == score[i-1].value)
