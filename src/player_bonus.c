@@ -20,9 +20,14 @@ int main(int argc, char *argv[]) {
     for (int round=0; round<10; round++) {
         for (int i=0; i<4; i++)
             fscanf(fin, "%d", money_in+i);
-        int pay = 0;
-        if (round % 4 == player_index)
-            pay = money_in[player_index];
+        int pay = money_in[player_index] / (11-round);
+        int i, max = 0;
+        for (i=0; i<4; i++) {
+            if (i == player_index) continue;
+            if (pay < money_in[i]) break;
+            if (money_in[i] > max) max = money_in[i];
+        }
+        if (i == 4) pay = max;
         fprintf(fout, "%c %d %d\n", argv[2][0], random_key, pay);
         fflush(fout);
         fsync(fdout);

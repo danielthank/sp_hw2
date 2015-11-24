@@ -1,3 +1,4 @@
+/*B02901107 金延儒*/
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
